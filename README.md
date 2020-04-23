@@ -6,6 +6,7 @@ Control switches using an android app.
 ![Alt](https://github.com/BalrajGupta/Home-Automation/blob/master/block%20diagram.png)
 # Hardware 
 The following hardware were used for test the project:
-- NODEMCU- ESP-8266:  Low cost IoT microcontroller
-- 8 channel Relay(5V) : to allow each microcontroller to control upto 8 A.C electrical appliances
-- Android smartphone with android version 7.1 and above
+- A Wifi Router to connect all devices.
+- NODEMCU- ESP-8266:  Low cost IoT microcontroller.
+- 8 channel Relay(5V) : to allow each microcontroller to control upto 8 A.C electrical appliances.
+- Android smartphone with android version 7.1 and above.

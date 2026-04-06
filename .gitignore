@@ -1,0 +1,19 @@
+# Gradle / Android #
+####################
+TheHive/.gradle/
+TheHive/build/
+TheHive/app/build/
+TheHive/local.properties
+TheHive/.idea/
+TheHive/**/*.iml
+
+# Arduino #
+###########
+build/
+*.bin
+*.elf
+*.hex
+
+# MacOS #
+#########
+.DS_Store

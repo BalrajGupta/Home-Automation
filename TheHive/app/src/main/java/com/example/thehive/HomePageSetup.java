@@ -21,8 +21,7 @@ import com.example.thehive.device_setup.Device;
 import com.example.thehive.device_setup.DeviceAdd;
 import com.example.thehive.device_setup.DeviceShow;
 
-import java.io.FileInputStream;
-import java.io.IOException;
+import org.json.JSONArray;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -68,49 +67,19 @@ public class HomePageSetup extends ListActivity {
         else {
             String filename = "ROOM.tex";
 
-            String line;
-            int number = 0;
-
+            JSONArray roomsArray = StorageUtils.readJsonArray(this, filename);
+            int number = roomsArray.length();
+            
+            for (int i = 0; i < number; i++) {
                 try {
-
-                    FileInputStream read = openFileInput(filename);
-                    int sizea = read.available();
-                    byte[] buffer = new byte[sizea];
-                    read.read(buffer);
-                    line = new String(buffer);
-
-                    Log.d("log-info", "  " + line + "\n");
-                    String mess = "";
-                    int length = line.length(), k = 0;
-
-                    String lengtha = Integer.toString(length);
-
-                    Log.d("log-info + length", lengtha + "\n");
-
-                    while (k != length) {
-
-                        String q = Character.toString(line.charAt(k));
-                        final String p = "$";
-
-                       // Log.d("log-info + char", Integer.toString(k) + " " + q + "\n");
-                        k++;
-                        if (p.equals(q)) {
-                            Log.d("log-info", "  " + mess + "\n");
-                            number++;
-                            roomList.add(mess);
-                            mess = "";
-                        } else {
-                            mess = mess + q;
-                        }
-                    }
-
-                } catch (IOException e) {
-                    Log.d("Error", "not found");
+                    roomList.add(roomsArray.getString(i));
+                } catch (Exception e) {
                     e.printStackTrace();
-
                 }
+            }
+
             Log.d("log-info","list of room " +Integer.toString(number)+"\n");
-                //load image.
+            //load image.
             l1=getListView();
             int i=0;
             for (i=0;i<number;i++)

@@ -11,9 +11,12 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 import com.example.thehive.R;
-import com.example.thehive.RoomAdd;
 import com.example.thehive.RoomData;
-
+import android.net.nsd.NsdManager;
+import android.net.nsd.NsdServiceInfo;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import com.example.thehive.StorageUtils;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -52,67 +55,23 @@ public class DeviceAdd extends AppCompatActivity {
         dev_gpio = findViewById(R.id.dev_gpio);
         dev_name = findViewById(R.id.dev_name);
 
-
-        String line;
-        int number = 0;
+        discoverDeviceIP();
 
         try {
-
-            FileInputStream read = openFileInput(roomfile);
-            int sizea = read.available();
-            byte[] buffer = new byte[sizea];
-            read.read(buffer);
-            line = new String(buffer);
-
-            Log.d("device-page", "  " + line + "\n");
-            String mess = "";
-            int length = line.length(), k = 0;
-
-            String lengtha = Integer.toString(length);
-
-            Log.d("device-page + length", line + "\n");
-
-            while (k != length) {
-
-                String q = Character.toString(line.charAt(k));
-                final String p = "$",x="#";
-
-                Log.d("device-page + char", Integer.toString(k) + " " + q + "\n");
-                k++;
-                if (p.equals(q)) {
-                    Log.d("device-page", "  " + mess + "\n");
-
-                    if(number%4==0){
-                        namea=mess;
-                    }
-                    else if(number%4==1){
-                        ipa=mess;
-                    }
-                    else if(number%4==2)
-                    {
-                        gpioa=Integer.parseInt(mess);
-                    }
-                    else
-                    {
-                        imagea=Integer.parseInt(mess);
-                    }
-
-                    mess = "";
-                    number++;
-                }
-                else if(x.equals(q))
-                {
-                    room.deviceList.add(new Device(namea,ipa,gpioa,imagea));
-                    mess="";
-                }else {
-                    mess = mess + q;
-                }
+            JSONArray deviceArray = StorageUtils.readJsonArray(this, roomfile);
+            for(int i=0; i<deviceArray.length(); i++) {
+                try {
+                    JSONObject obj = deviceArray.getJSONObject(i);
+                    room.deviceList.add(new Device(
+                        obj.getString("name"),
+                        obj.getString("ip"),
+                        obj.getInt("gpio"),
+                        obj.getInt("image")
+                    ));
+                } catch(Exception e) { e.printStackTrace(); }
             }
-
-        } catch (IOException e) {
-            Log.d("Error", "not found");
+        } catch (Exception e) {
             e.printStackTrace();
-
         }
 
 
@@ -143,16 +102,18 @@ public class DeviceAdd extends AppCompatActivity {
 
                 Log.d("device-page image",Integer.toString(imageid));
 
-                //saving in the file.
-                FileOutputStream outputStream;
-                String Rname=name+"$"+ip+"$"+Integer.toString(gpio)+"$"+Integer.toString(imageid)+"$"+"#";
+                //saving in the JSON file.
                 try {
-                    outputStream = openFileOutput(roomfile, Context.MODE_APPEND);
-                    outputStream.write(Rname.getBytes());
-                    outputStream.close();
+                    JSONArray deviceArray = StorageUtils.readJsonArray(DeviceAdd.this, roomfile);
+                    JSONObject newObj = new JSONObject();
+                    newObj.put("name", name);
+                    newObj.put("ip", ip);
+                    newObj.put("gpio", gpio);
+                    newObj.put("image", imageid);
+                    deviceArray.put(newObj);
+                    StorageUtils.writeJsonArray(DeviceAdd.this, roomfile, deviceArray);
                 } catch (Exception e) {
                     e.printStackTrace();
-
                 }
 
                 dev_gpio.setText(null);
@@ -173,5 +134,48 @@ public class DeviceAdd extends AppCompatActivity {
         args.putSerializable("ARRAYLIST", room.deviceList);
         intent.putExtra("BUNDLE",args);
         startActivity(intent);
+    }
+
+    private void discoverDeviceIP() {
+        final NsdManager nsdManager = (NsdManager) getSystemService(Context.NSD_SERVICE);
+        NsdManager.DiscoveryListener discoveryListener = new NsdManager.DiscoveryListener() {
+            @Override
+            public void onStartDiscoveryFailed(String serviceType, int errorCode) { }
+            @Override
+            public void onStopDiscoveryFailed(String serviceType, int errorCode) { }
+            @Override
+            public void onDiscoveryStarted(String serviceType) { }
+            @Override
+            public void onDiscoveryStopped(String serviceType) { }
+            @Override
+            public void onServiceFound(NsdServiceInfo serviceInfo) {
+                if (serviceInfo.getServiceName().contains("esp8266")) {
+                    nsdManager.resolveService(serviceInfo, new NsdManager.ResolveListener() {
+                        @Override
+                        public void onResolveFailed(NsdServiceInfo serviceInfo, int errorCode) { }
+                        @Override
+                        public void onServiceResolved(NsdServiceInfo serviceInfo) {
+                            final String foundIp = serviceInfo.getHost().getHostAddress();
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    if(dev_ip.getText().toString().isEmpty()) {
+                                        dev_ip.setText(foundIp);
+                                        Toast.makeText(DeviceAdd.this, "Found SmartHome node: " + foundIp, Toast.LENGTH_SHORT).show();
+                                    }
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+            @Override
+            public void onServiceLost(NsdServiceInfo serviceInfo) { }
+        };
+        try {
+            nsdManager.discoverServices("_http._tcp.", NsdManager.PROTOCOL_DNS_SD, discoveryListener);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

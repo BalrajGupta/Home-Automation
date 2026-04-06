@@ -44,16 +44,8 @@ public class ApplianceMenu extends AppCompatActivity {
         dev_name.setText(device.get_Name());
 
         OnOFF = findViewById(R.id.toggleButton);
+        setupToggleListener();
         communicate(sendURL_status());
-        setstate(qreply);
-
-        OnOFF.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                communicate(sendURL_toggle());
-                setstate(qreply);//check
-            }
-        });
     }
 
     void onTimer(View view)
@@ -64,12 +56,12 @@ public class ApplianceMenu extends AppCompatActivity {
 
     String sendURL_status()
     {
-        urls1=device.getIp() + "/?0"+Integer.toString(device.getGpio());
+        urls1 = device.getIp() + "/status?pin=" + Integer.toString(device.getGpio());
         return urls1;
     }
     String sendURL_toggle()
     {
-        urls1=device.getIp() + "/?1"+Integer.toString(device.getGpio());
+        urls1 = device.getIp() + "/toggle?pin=" + Integer.toString(device.getGpio()) + "&key=123456";
         return urls1;
     }
 
@@ -79,22 +71,42 @@ public class ApplianceMenu extends AppCompatActivity {
         talkNODEmcu(murls);
     }
 
-    public void setstate (String responce)
-        {
-            if(responce=="404")
-            {
-
-                Toast.makeText(ApplianceMenu.this,"Network Error...",Toast.LENGTH_SHORT).show();
-            }
-            else
-            {
-                Toast.makeText(ApplianceMenu.this,responce, Toast.LENGTH_SHORT).show();
-//                if(responce.equalsIgnoreCase("on"))
-  //                  OnOFF.setChecked(true);
-    //            if(responce.equalsIgnoreCase("off"))
-      //              OnOFF.setChecked(false);
-            }
+    public void setstate(String response) {
+        if (response.equals("404")) {
+            Toast.makeText(ApplianceMenu.this, "Network Error...", Toast.LENGTH_SHORT).show();
+            return;
         }
+        try {
+            org.json.JSONObject json = new org.json.JSONObject(response);
+            if (json.has("state")) {
+                String state = json.getString("state");
+                Toast.makeText(ApplianceMenu.this, state, Toast.LENGTH_SHORT).show();
+                if (state.equalsIgnoreCase("ON")) {
+                    OnOFF.setOnCheckedChangeListener(null); 
+                    OnOFF.setChecked(true);
+                    setupToggleListener(); 
+                } else {
+                    OnOFF.setOnCheckedChangeListener(null);
+                    OnOFF.setChecked(false);
+                    setupToggleListener();
+                }
+            } else if (json.has("error")) {
+                Toast.makeText(ApplianceMenu.this, "Error: " + json.getString("error"), Toast.LENGTH_SHORT).show();
+            }
+        } catch (org.json.JSONException e) {
+            Toast.makeText(ApplianceMenu.this, "Invalid Response", Toast.LENGTH_SHORT).show();
+            e.printStackTrace();
+        }
+    }
+
+    private void setupToggleListener() {
+        OnOFF.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                communicate(sendURL_toggle());
+            }
+        });
+    }
 
     public void talkNODEmcu(String urls) { //make tcp communication with nodemcu
 
@@ -108,6 +120,7 @@ public class ApplianceMenu extends AppCompatActivity {
                         public void onResponse(String response) {
                             qreply = response;
                             Log.i("Server message", qreply);
+                            setstate(qreply);
                         }
                     }, new Response.ErrorListener() {
                 @Override

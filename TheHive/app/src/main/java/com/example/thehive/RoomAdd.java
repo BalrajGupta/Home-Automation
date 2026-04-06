@@ -12,7 +12,7 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Toast;
 
-import java.io.FileOutputStream;
+import org.json.JSONArray;
 import java.util.ArrayList;
 
 public class RoomAdd extends ListActivity {
@@ -53,19 +53,9 @@ public class RoomAdd extends ListActivity {
                     Toast.makeText(getBaseContext(), "Room Added", Toast.LENGTH_SHORT).show();
 
                     //saving in the file.
-                    FileOutputStream outputStream;
-                    Rname=Rname+"$";
-                    try {
-                        outputStream = openFileOutput(filename, Context.MODE_APPEND);
-                        outputStream.write(Rname.getBytes());
-                        outputStream.close();
-
-                        // Toast.makeText(MainActivity.this,"saved",Toast.LENGTH_SHORT).show();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-
-                        //Toast.makeText(MainActivity.this,"not saved",Toast.LENGTH_SHORT).show();
-                    }
+                    JSONArray roomsArray = StorageUtils.readJsonArray(RoomAdd.this, filename);
+                    roomsArray.put(Rname);
+                    StorageUtils.writeJsonArray(RoomAdd.this, filename, roomsArray);
                 }
             }
         });
